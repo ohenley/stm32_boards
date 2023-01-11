@@ -306,7 +306,8 @@ package body Framebuffer_LTDC is
          for Buf in 1 .. 2 loop
             Display.Buffers (LCD_Layer, Buf) :=
               (Addr       =>
-                 Reserve (UInt32 (HAL.Bitmap.Bits_Per_Pixel (Mode) * W * H / 8)),
+                 Reserve (UInt32 (
+                  HAL.Bitmap.Bits_Per_Pixel (Mode) * W * H / 8)),
                Width      => W,
                Height     => H,
                Color_Mode => Mode,
@@ -317,7 +318,8 @@ package body Framebuffer_LTDC is
          for Buf in 1 .. 2 loop
             Display.Buffers (LCD_Layer, Buf) :=
               (Addr       =>
-                 Reserve (UInt32 (HAL.Bitmap.Bits_Per_Pixel (Mode) * W * H / 8)),
+                 Reserve (UInt32 (
+                  HAL.Bitmap.Bits_Per_Pixel (Mode) * W * H / 8)),
                Width      => H,
                Height     => W,
                Color_Mode => Mode,

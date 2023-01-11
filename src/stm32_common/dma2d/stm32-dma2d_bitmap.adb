@@ -168,7 +168,6 @@ package body STM32.DMA2D_Bitmap is
          H := Height;
       end if;
 
-
       if To_DMA2D_CM (Buffer.Color_Mode) in DMA2D_Dst_Color_Mode then
          if not Buffer.Swapped then
             DMA2D_Fill_Rect

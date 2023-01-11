@@ -47,7 +47,6 @@ generic
 
    with procedure Initialize_I2C_GPIO (Port : in out STM32.I2C.I2C_Port);
 
-
 package Touch_Panel_FT6x06 is
 
    type Touch_Panel is

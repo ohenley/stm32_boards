@@ -168,7 +168,7 @@ package body Touch_Panel_STMPE811 is
    is
    begin
       null;
-      --This.Set_Use_Interrupts (Enabled);
+      --  This.Set_Use_Interrupts (Enabled);
    end Enable_Interrupts;
 
 end Touch_Panel_STMPE811;
