@@ -1,0 +1,52 @@
+with "config/stm32_boards_config.gpr";
+with "config/stm32_config_config.gpr";
+project Stm32_Boards is
+
+   for Target use "arm-eabi";
+   case Stm32_Config_Config.Runtime is
+      when "light_tasking" => 
+         for Runtime ("Ada") use "light-tasking-" & Stm32_Config_Config.Board;
+      when others =>
+         for Runtime ("Ada") use Stm32_Config_Config.Runtime & "-" & Stm32_Config_Config.Board;
+   end case;
+   
+   for Library_Name use "Stm32_Boards";
+   for Library_Version use Project'Library_Name & ".so." & Stm32_Boards_Config.Crate_Version;
+
+   Board_Src_Dirs := ("src/common/",
+                      "src/stm32_common/",
+                      "src/stm32_common/dma2d",
+                      "src/stm32_common/ft6x06",
+                      "src/stm32_common/lch_full",
+                      "src/stm32_common/lch_sfp",
+                      "src/stm32_common/ltdc",
+                      "src/stm32_common/sdram");
+   case Stm32_Config_Config.Board is
+      when "stm32f429disco" =>
+         Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f429disco");
+      when others => null;
+   end case;
+
+   for Source_Dirs use ("src/", "config/") & Board_Src_Dirs;
+   for Object_Dir use "obj/" & Stm32_Boards_Config.Build_Profile;
+   for Create_Missing_Dirs use "True";
+   for Library_Dir use "lib";
+
+   type Library_Type_Type is ("relocatable", "static", "static-pic");
+   Library_Type : Library_Type_Type :=
+     external ("STM32_BOARDS_LIBRARY_TYPE", external ("LIBRARY_TYPE", "static"));
+   for Library_Kind use Library_Type;
+
+   package Compiler is
+      for Default_Switches ("Ada") use Stm32_Boards_Config.Ada_Compiler_Switches;
+   end Compiler;
+
+   package Binder is
+      for Switches ("Ada") use ("-Es"); --  Symbolic traceback
+   end Binder;
+
+   package Install is
+      for Artifacts (".") use ("share");
+   end Install;
+
+end Stm32_Boards;
