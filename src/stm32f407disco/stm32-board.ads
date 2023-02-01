@@ -62,13 +62,13 @@ package STM32.Board is
 
    subtype User_LED is GPIO_Point;
 
-   Green  : User_LED renames PD12;
-   Orange : User_LED renames PD13;
-   Red    : User_LED renames PD14;
-   Blue   : User_LED renames PD15;
+   Green_LED  : User_LED renames PD12;
+   Orange_LED : User_LED renames PD13;
+   Red_LED    : User_LED renames PD14;
+   Blue_LED   : User_LED renames PD15;
 
-   All_LEDs : GPIO_Points := Green & Orange & Red & Blue;
-   LCH_LED  : GPIO_Point renames Red;
+   All_LEDs : GPIO_Points := Green_LED & Orange_LED & Red_LED & Blue_LED;
+   LCH_LED  : GPIO_Point renames Red_LED;
 
    procedure Initialize_LEDs;
    --  MUST be called prior to any use of the LEDs
@@ -85,7 +85,8 @@ package STM32.Board is
    procedure Initialize_Audio;
 
    Audio_I2C : I2C_Port renames I2C_1;
-   Audio_I2C_Points : constant GPIO_Points (1 .. 2) := (PB6, PB9);
+   Audio_I2C_SDA : GPIO_Point renames PB9;
+   Audio_I2C_SCL : GPIO_Point renames PB6;
    Audio_I2S_Points : constant GPIO_Points (1 .. 4) := (PC7, PC10, PC12, PA4);
    Audio_I2S : I2S_Port renames I2S_3;
    Audio_Rate : constant Audio_Frequency := Audio_Freq_48kHz;
@@ -94,7 +95,7 @@ package STM32.Board is
                                        Ravenscar_Time.Delays);
 
    Acc_SPI    : SPI_Port renames SPI_1;
-   Acc_SPI_AF : GPIO_Alternate_Function renames GPIO_AF_5_SPI1;
+   Acc_SPI_AF : GPIO_Alternate_Function renames GPIO_AF_SPI1_5;
 
    Acc_Chip_Select_Pin : GPIO_Point renames PE3;
    Acc_SPI_SCK_Pin     : GPIO_Point renames PA5;

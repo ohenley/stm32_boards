@@ -13,17 +13,16 @@ project Stm32_Boards is
    for Library_Name use "Stm32_Boards";
    for Library_Version use Project'Library_Name & ".so." & Stm32_Boards_Config.Crate_Version;
 
-   Board_Src_Dirs := ("src/common/",
-                      "src/stm32_common/",
-                      "src/stm32_common/dma2d",
-                      "src/stm32_common/ft6x06",
-                      "src/stm32_common/lch_full",
-                      "src/stm32_common/lch_sfp",
-                      "src/stm32_common/ltdc",
-                      "src/stm32_common/sdram");
+   Board_Src_Dirs := ("src/user_button/",
+                      "src/dma2d",
+                      "src/ltdc",
+                      "src/sdram",
+                      "src/ravenscar");
+
    case Stm32_Config_Config.Board is
       when "stm32f429disco" =>
-         Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f429disco");
+         Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f429disco",
+                                             "src/stm32f429disco/full");
       when others => null;
    end case;
 

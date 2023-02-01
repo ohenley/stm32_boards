@@ -42,6 +42,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Real_Time; use Ada.Real_Time;
+with STM32.Setup;
 with HAL.SPI;
 with LIS3DSH;       use LIS3DSH;
 
@@ -70,16 +71,15 @@ package body STM32.Board is
    ---------------------
 
    procedure Initialize_LEDs is
-      Configuration : GPIO_Port_Configuration;
    begin
       Enable_Clock (All_LEDs);
 
-      Configuration.Mode        := Mode_Out;
-      Configuration.Output_Type := Push_Pull;
-      Configuration.Speed       := Speed_100MHz;
-      Configuration.Resistors   := Floating;
-      Configure_IO (All_LEDs,
-                    Config => Configuration);
+      Configure_IO
+        (All_LEDs,
+         (Mode_Out,
+          Resistors   => Floating,
+          Output_Type => Push_Pull,
+          Speed       => Speed_100MHz));
    end Initialize_LEDs;
 
    ----------------------
@@ -89,7 +89,6 @@ package body STM32.Board is
    procedure Initialize_Audio is
 
       procedure Initialize_GPIO;
-      procedure Configure_I2C;
 
       ---------------------
       -- Initialize_GPIO --
@@ -98,30 +97,16 @@ package body STM32.Board is
       procedure Initialize_GPIO is
       begin
 
-         -- I2C --
-
-         Enable_Clock (Audio_I2C_Points);
-
-         Configure_Alternate_Function (Audio_I2C_Points, GPIO_AF_4_I2C1);
-
-         Configure_IO (Audio_I2C_Points,
-                       (Speed       => Speed_High,
-                        Mode        => Mode_AF,
-                        Output_Type => Open_Drain,
-                        Resistors   => Floating));
-         Lock (Audio_I2C_Points);
-
          -- I2S --
 
          Enable_Clock (Audio_I2S_Points);
 
          Configure_IO (Audio_I2S_Points,
-                       (Speed       => Speed_High,
-                        Mode        => Mode_AF,
-                        Output_Type => Push_Pull,
-                        Resistors   => Floating));
-
-         Configure_Alternate_Function (Audio_I2S_Points, GPIO_AF_6_I2S3);
+            (Mode           => Mode_AF,
+             Resistors      => Floating,
+             AF_Speed       => Speed_High,
+             AF_Output_Type => Push_Pull,
+             AF             => GPIO_AF_I2S3_6));
 
          Lock (Audio_I2S_Points);
 
@@ -137,34 +122,17 @@ package body STM32.Board is
          Lock (DAC_Reset_Point);
       end Initialize_GPIO;
 
-      -------------------
-      -- Configure_I2C --
-      -------------------
-
-      procedure Configure_I2C
-      is
-         I2C_Conf : I2C_Configuration;
-      begin
-
-         Enable_Clock (I2C_1);
-         delay until Clock + Milliseconds (200);
-         Reset (I2C_1);
-
-         I2C_Conf.Own_Address := 16#00#;
-         I2C_Conf.Addressing_Mode := Addressing_Mode_7bit;
-         I2C_Conf.General_Call_Enabled := False;
-         I2C_Conf.Clock_Stretching_Enabled := True;
-
-         I2C_Conf.Clock_Speed := 100_000;
-
-         I2C_1.Configure (I2C_Conf);
-      end Configure_I2C;
-
       Conf : I2S_Configuration;
 
    begin
       Initialize_GPIO;
-      Configure_I2C;
+
+      STM32.Setup.Setup_I2C_Master (Port        => I2C_1,
+                                    SDA         => Audio_I2C_SDA,
+                                    SCL         => Audio_I2C_SCL,
+                                    SDA_AF      => GPIO_AF_I2C1_4,
+                                    SCL_AF      => GPIO_AF_I2C1_4,
+                                    Clock_Speed => 100_000);
 
       Set_PLLI2S_Factors (Pll_N => 258,
                           Pll_R => 3);
@@ -202,14 +170,9 @@ package body STM32.Board is
    --------------------------------
 
    procedure Configure_User_Button_GPIO is
-      Config : GPIO_Port_Configuration;
    begin
       Enable_Clock (User_Button_Point);
-
-      Config.Mode := Mode_In;
-      Config.Resistors := Floating;
-
-      Configure_IO (User_Button_Point, Config);
+      Configure_IO (User_Button_Point, (Mode_In, Resistors => Floating));
    end Configure_User_Button_GPIO;
 
    ------------------------------
@@ -250,28 +213,26 @@ package body STM32.Board is
       ---------------
 
       procedure Init_GPIO is
-         Config : GPIO_Port_Configuration;
          SPI_Points : constant GPIO_Points := Acc_SPI_MOSI_Pin &
            Acc_SPI_MISO_Pin & Acc_SPI_SCK_Pin;
       begin
          Enable_Clock (SPI_Points);
 
-         Config.Output_Type := Push_Pull;
-         Config.Resistors   := Floating;
-         Config.Speed       := Speed_50MHz;
-         Config.Mode        := Mode_AF;
-
-         Configure_IO (SPI_Points, Config);
-         Configure_Alternate_Function (SPI_Points, Acc_SPI_AF);
+         Configure_IO (SPI_Points,
+            (Mode_AF,
+             AF             => Acc_SPI_AF,
+             Resistors      => Floating,
+             AF_Speed       => Speed_50MHz,
+             AF_Output_Type => Push_Pull));
 
          Enable_Clock (Acc_Chip_Select_Pin);
 
-         Config.Mode        := Mode_Out;
-         Config.Output_Type := Push_Pull;
-         Config.Resistors   := Pull_Up;
-         Config.Speed       := Speed_25MHz;
+         Acc_Chip_Select_Pin.Configure_IO
+           ((Mode_Out,
+            Resistors   => Pull_Up,
+            Output_Type => Push_Pull,
+            Speed       => Speed_25MHz));
 
-         Acc_Chip_Select_Pin.Configure_IO (Config);
          Acc_Chip_Select_Pin.Set;
       end Init_GPIO;
 

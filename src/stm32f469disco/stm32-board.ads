@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                    Copyright (C) 2015, AdaCore                           --
+--                     Copyright (C) 2015-2018, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -33,14 +33,16 @@
 --  manufactured by ST Microelectronics.
 
 with Ada.Interrupts.Names;  use Ada.Interrupts;
+with System;
 
-with STM32.Device;  use STM32.Device;
+with STM32.Device;          use STM32.Device;
 
-with STM32.DMA;     use STM32.DMA;
-with STM32.FMC;     use STM32.FMC;
-with STM32.GPIO;    use STM32.GPIO;
-with STM32.I2C;     use STM32.I2C;
-with STM32.SAI;     use STM32.SAI;
+with STM32.DMA;             use STM32.DMA;
+with STM32.DMA.Interrupts;  use STM32.DMA.Interrupts;
+with STM32.FMC;             use STM32.FMC;
+with STM32.GPIO;            use STM32.GPIO;
+with STM32.I2C;             use STM32.I2C;
+with STM32.SAI;             use STM32.SAI;
 
 use STM32;  -- for base addresses
 
@@ -55,20 +57,20 @@ package STM32.Board is
 
    subtype User_LED is GPIO_Point;
 
-   Green     : User_LED renames PG6;
-   Orange    : User_LED renames PD4;
-   Red       : User_LED renames PD5;
-   Blue      : User_LED renames PK3;
+   Green_LED  : User_LED renames PG6;
+   Orange_LED : User_LED renames PD4;
+   Red_LED    : User_LED renames PD5;
+   Blue_LED   : User_LED renames PK3;
 
-   LCH_LED   : User_LED renames Red;
+   LCH_LED   : User_LED renames Red_LED;
 
-   All_LEDs  : GPIO_Points := Green & Orange & Red & Blue;
+   All_LEDs  : GPIO_Points := Green_LED & Orange_LED & Red_LED & Blue_LED;
 
    procedure Initialize_LEDs;
    --  MUST be called prior to any use of the LEDs
 
-   procedure Turn_On  (This : in out User_LED) renames STM32.GPIO.Clear;
-   procedure Turn_Off (This : in out User_LED) renames STM32.GPIO.Set;
+   procedure Turn_On  (This : in out User_LED) renames STM32.GPIO.Set;
+   procedure Turn_Off (This : in out User_LED) renames STM32.GPIO.Clear;
    procedure Toggle   (This : in out User_LED) renames STM32.GPIO.Toggle;
 
    procedure All_LEDs_Off with Inline;
@@ -145,8 +147,6 @@ package STM32.Board is
             or else
             As_Port_Id (Port) = I2C_Id_2;
 
-   procedure Configure_I2C (Port : in out I2C_Port);
-
    --------------------------------
    -- Screen/Touch panel devices --
    --------------------------------
@@ -154,28 +154,23 @@ package STM32.Board is
    LCD_Natural_Width  : constant := Framebuffer_OTM8009A.LCD_Natural_Width;
    LCD_Natural_Height : constant := Framebuffer_OTM8009A.LCD_Natural_Height;
    Display            : Framebuffer_OTM8009A.Frame_Buffer;
+   Touch_Panel        : Touch_Panel_FT6x06.Touch_Panel;
 
    -----------------
    -- Touch Panel --
    -----------------
 
-   TP_INT       : GPIO_Point renames PJ5;
-   TP_Interrupt : constant Interrupt_ID := Names.EXTI9_5_Interrupt;
-
-   package TP is new Touch_Panel_FT6x06
-     (TP_I2C              => I2C_1'Access,
-      TP_INT              => TP_INT,
-      Initialize_I2C_GPIO => Initialize_I2C_GPIO,
-      Width               => LCD_Natural_Width,
-      Height              => LCD_Natural_Height);
-   Touch_Panel : TP.Touch_Panel;
+   TP_INT   : GPIO_Point renames PJ5;
 
    -----------
    -- Audio --
    -----------
 
-   Audio_SAI       : SAI_Controller renames SAI_1;
-   Audio_I2C       : STM32.I2C.I2C_Port renames I2C_2;
+   Audio_SAI     : SAI_Controller renames SAI_1;
+   Audio_I2C     : STM32.I2C.I2C_Port renames I2C_2;
+   Audio_I2C_SDA : STM32.GPIO.GPIO_Point renames I2C2_SDA;
+   Audio_I2C_SCL : STM32.GPIO.GPIO_Point renames I2C2_SCL;
+   Audio_I2C_AF  : constant STM32.GPIO_Alternate_Function := STM32.Device.GPIO_AF_I2C2_4;
 --     Audio_INT     : GPIO_Point renames PB10;
 
    --  Audio DMA configuration
@@ -202,6 +197,34 @@ package STM32.Board is
    ------------
    -- SDCARD --
    ------------
+
+   SD_Detect_Pin     : STM32.GPIO.GPIO_Point renames PG2;
+
+   SD_DMA            : DMA_Controller renames DMA_2;
+   SD_DMA_Rx_Stream  : DMA_Stream_Selector renames Stream_3;
+   SD_DMA_Rx_Channel : DMA_Channel_Selector renames Channel_4;
+   SD_DMA_Tx_Stream  : DMA_Stream_Selector renames Stream_6;
+   SD_DMA_Tx_Channel : DMA_Channel_Selector renames Channel_4;
+   SD_Pins           : constant GPIO_Points :=
+                         (PC8, PC9, PC10, PC11, PC12, PD2);
+   SD_Pins_AF        : constant GPIO_Alternate_Function := GPIO_AF_SDIO_12;
+   SD_Pins_2         : constant GPIO_Points := (1 .. 0 => <>);
+   SD_Pins_AF_2      : constant GPIO_Alternate_Function := GPIO_AF_SDIO_12;
+   SD_Interrupt      : Ada.Interrupts.Interrupt_ID renames
+                         Ada.Interrupts.Names.SDIO_Interrupt;
+
+   DMA2_Stream3 : aliased DMA_Interrupt_Controller
+     (DMA_2'Access, Stream_3,
+      Ada.Interrupts.Names.DMA2_Stream3_Interrupt,
+      System.Interrupt_Priority'Last);
+
+   DMA2_Stream6 : aliased DMA_Interrupt_Controller
+     (DMA_2'Access, Stream_6,
+      Ada.Interrupts.Names.DMA2_Stream6_Interrupt,
+      System.Interrupt_Priority'Last);
+
+   SD_Rx_DMA_Int     : DMA_Interrupt_Controller renames DMA2_Stream3;
+   SD_Tx_DMA_Int     : DMA_Interrupt_Controller renames DMA2_Stream6;
 
    SDCard_Device : aliased SDCard.SDCard_Controller (SDIO'Access);
 

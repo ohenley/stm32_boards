@@ -29,8 +29,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Real_Time; use Ada.Real_Time;
-
 package body STM32.Board is
 
    ------------------
@@ -56,16 +54,16 @@ package body STM32.Board is
    ---------------------
 
    procedure Initialize_LEDs is
-      Conf : GPIO_Port_Configuration;
    begin
       Enable_Clock (All_LEDs);
 
-      Conf.Mode        := Mode_Out;
-      Conf.Output_Type := Push_Pull;
-      Conf.Speed       := Speed_100MHz;
-      Conf.Resistors   := Floating;
+      Configure_IO
+        (All_LEDs,
+         (Mode        => Mode_Out,
+          Output_Type => Push_Pull,
+          Speed       => Speed_100MHz,
+          Resistors   => Floating));
 
-      Configure_IO (All_LEDs, Conf);
       All_LEDs_Off;
    end Initialize_LEDs;
 
@@ -95,62 +93,27 @@ package body STM32.Board is
 
       Enable_Clock (Points);
 
-      if Id = I2C_Id_1 then
-         Configure_Alternate_Function (Points, GPIO_AF_4_I2C1);
-      else
-         Configure_Alternate_Function (Points, GPIO_AF_4_I2C2);
-      end if;
-
       Configure_IO (Points,
-                    (Speed       => Speed_High,
-                     Mode        => Mode_AF,
-                     Output_Type => Open_Drain,
-                     Resistors   => Floating));
+                    (Mode           => Mode_AF,
+                     AF             => (if Id = I2C_Id_1 then GPIO_AF_I2C1_4 else GPIO_AF_I2C2_4),
+                     AF_Speed       => Speed_High,
+                     AF_Output_Type => Open_Drain,
+                     Resistors      => Floating));
       Lock (Points);
 
       Enable_Clock (Port);
       Reset (Port);
    end Initialize_I2C_GPIO;
 
-   -------------------
-   -- Configure_I2C --
-   -------------------
-
-   procedure Configure_I2C (Port : in out I2C_Port)
-   is
-      I2C_Conf : I2C_Configuration;
-   begin
-
-      --  Wait at least 200ms after power up before accessing the TP registers
-      delay until Clock + Milliseconds (200);
-
-      if not Port.Port_Enabled then
-         Reset (Port);
-
-         I2C_Conf.Own_Address := 16#00#;
-         I2C_Conf.Addressing_Mode := Addressing_Mode_7bit;
-         I2C_Conf.General_Call_Enabled := False;
-         I2C_Conf.Clock_Stretching_Enabled := True;
-
-         I2C_Conf.Clock_Speed := 100_000;
-
-         Port.Configure (I2C_Conf);
-      end if;
-   end Configure_I2C;
-
    --------------------------------
    -- Configure_User_Button_GPIO --
    --------------------------------
 
    procedure Configure_User_Button_GPIO is
-      Config : GPIO_Port_Configuration;
    begin
       Enable_Clock (User_Button_Point);
 
-      Config.Mode := Mode_In;
-      Config.Resistors := Floating;
-
-      Configure_IO (User_Button_Point, Config);
+      Configure_IO (User_Button_Point, (Mode_In, Resistors => Floating));
    end Configure_User_Button_GPIO;
 
 end STM32.Board;

@@ -32,13 +32,12 @@
 --  Based on ft5336.h from MCD Application Team
 
 with Ada.Real_Time;        use Ada.Real_Time;
+with Ada.Unchecked_Conversion;
 
 with HAL.Touch_Panel;      use HAL.Touch_Panel;
 
 with STM32.Board;          use STM32.Board;
-with STM32.Device;         use STM32.Device;
-with STM32.EXTI;           use STM32.EXTI;
-with STM32.GPIO;           use STM32.GPIO;
+with STM32.Setup;
 
 package body Touch_Panel_FT5336 is
 
@@ -47,36 +46,23 @@ package body Touch_Panel_FT5336 is
    ----------------
 
    function Initialize
-     (This              : in out Touch_Panel;
-      Orientation       : HAL.Framebuffer.Display_Orientation :=
-                            HAL.Framebuffer.Default;
-      Calibrate         : Boolean := False;
-      Enable_Interrupts : Boolean := False) return Boolean
+     (This        : in out Touch_Panel;
+      Orientation : HAL.Framebuffer.Display_Orientation :=
+                      HAL.Framebuffer.Default)
+      return Boolean
    is
    begin
-      Initialize_I2C_GPIO (TP_I2C);
-
-      if Enable_Interrupts then
-         Enable_Clock (TP_INT);
-         STM32.GPIO.Configure_IO
-           (TP_INT,
-            (Mode        => Mode_In,
-             Output_Type => Open_Drain,
-             Speed       => Speed_High,
-             Resistors   => Pull_Down));
-         STM32.GPIO.Configure_Trigger (TP_INT, Interrupt_Rising_Edge);
-      end if;
-
       --  Wait at least 200ms after power up before accessing the TP registers
       delay until Clock + Milliseconds (200);
 
-      Configure_I2C (TP_I2C);
+      STM32.Setup.Setup_I2C_Master (Port        => TP_I2C,
+                                    SDA         => TP_I2C_SDA,
+                                    SCL         => TP_I2C_SCL,
+                                    SDA_AF      => TP_I2C_AF,
+                                    SCL_AF      => TP_I2C_AF,
+                                    Clock_Speed => 100_000);
 
-      if Calibrate and then not This.Calibrate then
-         return False;
-      end if;
-
-      This.Set_Use_Interrupts (Enable_Interrupts);
+      This.TP_Set_Use_Interrupts (False);
       This.Set_Orientation (Orientation);
 
       return This.Check_Id;
@@ -86,15 +72,11 @@ package body Touch_Panel_FT5336 is
    -- Initialize --
    ----------------
 
-   procedure Initialize
-     (This              : in out Touch_Panel;
-      Orientation       : HAL.Framebuffer.Display_Orientation :=
-                            HAL.Framebuffer.Default;
-      Calibrate         : Boolean := False;
-      Enable_Interrupts : Boolean := False)
-   is
+   procedure Initialize (This : in out Touch_Panel;
+      Orientation : HAL.Framebuffer.Display_Orientation :=
+                           HAL.Framebuffer.Default) is
    begin
-      if not This.Initialize (Orientation, Calibrate, Enable_Interrupts) then
+      if not This.Initialize (Orientation) then
          raise Constraint_Error with "Cannot initialize the touch panel";
       end if;
    end Initialize;
@@ -119,17 +101,5 @@ package body Touch_Panel_FT5336 is
                              Invert_Y or Swap_XY);
       end case;
    end Set_Orientation;
-
-   -----------------------
-   -- Enable_Interrupts --
-   -----------------------
-
-   procedure Enable_Interrupts
-     (This    : in out Touch_Panel;
-      Enabled : Boolean)
-   is
-   begin
-      This.Set_Use_Interrupts (Enabled);
-   end Enable_Interrupts;
 
 end Touch_Panel_FT5336;

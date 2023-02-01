@@ -41,82 +41,42 @@
 --   COPYRIGHT(c) 2014 STMicroelectronics                                   --
 ------------------------------------------------------------------------------
 
-with STM32.Board; use STM32;
-with STM32.I2C;   use STM32.I2C;
-with STM32.GPIO;  use STM32.GPIO;
+with STM32.Board;          use STM32;
+with STM32.I2C;            use STM32.I2C;
+with STM32.GPIO;           use STM32.GPIO;
+with STM32.Setup;
 
-with STM32.Device; use STM32.Device;
+with STM32.Device;         use STM32.Device;
 
-with HAL.Touch_Panel; use HAL.Touch_Panel;
+with HAL.Touch_Panel;      use HAL.Touch_Panel;
 
-with STMPE811; use STMPE811;
+with STMPE811;             use STMPE811;
 
 package body Touch_Panel_STMPE811 is
 
-   SCL    : GPIO_Point renames PA8;
-   SCL_AF : constant GPIO_Alternate_Function := GPIO_AF_4_I2C3;
-
-   SDA    : GPIO_Point renames PC9;
-   SDA_AF : constant GPIO_Alternate_Function := GPIO_AF_4_I2C3;
-
-   procedure TP_Ctrl_Lines;
-   procedure TP_I2C_Config;
-
-   -------------------
-   -- TP_Ctrl_Lines --
-   -------------------
-
-   procedure TP_Ctrl_Lines is
-      GPIO_Conf : GPIO_Port_Configuration;
-   begin
-      Enable_Clock (GPIO_Points'(SDA, SCL));
-
-      Enable_Clock (TP_I2C);
-
-      SCL.Configure_Alternate_Function (SCL_AF);
-      SDA.Configure_Alternate_Function (SDA_AF);
-
-      GPIO_Conf.Speed       := Speed_25MHz;
-      GPIO_Conf.Mode        := Mode_AF;
-      GPIO_Conf.Output_Type := Open_Drain;
-      GPIO_Conf.Resistors   := Floating;
-      Configure_IO (GPIO_Points'(SCL, SDA), GPIO_Conf);
-
-      SCL.Lock;
-      SDA.Lock;
-   end TP_Ctrl_Lines;
-
-   -------------------
-   -- TP_I2C_Config --
-   -------------------
-
-   procedure TP_I2C_Config is
-   begin
-      if not TP_I2C.Port_Enabled then
-         Reset (TP_I2C);
-
-         TP_I2C.Configure
-           ((Mode                 => I2C_Mode, Duty_Cycle => DutyCycle_2,
-             Own_Address => 16#00#, Addressing_Mode => Addressing_Mode_7bit,
-             General_Call_Enabled => False, Clock_Stretching_Enabled => True,
-             Clock_Speed          => 100_000));
-      end if;
-   end TP_I2C_Config;
+   SCL        : GPIO_Point renames PA8;
+   SDA        : GPIO_Point renames PC9;
+   SCL_SDA_AF : constant GPIO_Alternate_Function := GPIO_AF_I2C3_4;
 
    ----------------
    -- Initialize --
    ----------------
 
    function Initialize
-     (This        : in out Touch_Panel;
-      Orientation :        HAL.Framebuffer.Display_Orientation :=
-        HAL.Framebuffer.Default)
-      return Boolean
+     (This : in out Touch_Panel;
+      Orientation : HAL.Framebuffer.Display_Orientation :=
+        HAL.Framebuffer.Default) return Boolean
    is
       Status : Boolean;
    begin
-      TP_Ctrl_Lines;
-      TP_I2C_Config;
+      if not TP_I2C.Port_Enabled then
+         STM32.Setup.Setup_I2C_Master (Port        => TP_I2C,
+                                       SDA         => SDA,
+                                       SCL         => SCL,
+                                       SDA_AF      => SCL_SDA_AF,
+                                       SCL_AF      => SCL_SDA_AF,
+                                       Clock_Speed => 100_000);
+      end if;
 
       Status := STMPE811_Device (This).Initialize;
       This.Set_Orientation (Orientation);
@@ -128,11 +88,9 @@ package body Touch_Panel_STMPE811 is
    -- Initialize --
    ----------------
 
-   procedure Initialize
-     (This        : in out Touch_Panel;
-      Orientation :        HAL.Framebuffer.Display_Orientation :=
-        HAL.Framebuffer.Default)
-   is
+   procedure Initialize (This : in out Touch_Panel;
+      Orientation : HAL.Framebuffer.Display_Orientation :=
+                           HAL.Framebuffer.Default) is
    begin
       if not This.Initialize (Orientation) then
          raise Constraint_Error with "Cannot initialize the touch panel";
@@ -145,30 +103,19 @@ package body Touch_Panel_STMPE811 is
 
    procedure Set_Orientation
      (This        : in out Touch_Panel;
-      Orientation :        HAL.Framebuffer.Display_Orientation)
+      Orientation : HAL.Framebuffer.Display_Orientation)
    is
    begin
       case Orientation is
          when HAL.Framebuffer.Default | HAL.Framebuffer.Portrait =>
-            This.Set_Bounds
-              (STM32.Board.LCD_Natural_Width, STM32.Board.LCD_Natural_Height,
-               0);
+            This.Set_Bounds (STM32.Board.LCD_Natural_Width,
+                             STM32.Board.LCD_Natural_Height,
+                             0);
          when HAL.Framebuffer.Landscape =>
-            This.Set_Bounds
-              (STM32.Board.LCD_Natural_Width, STM32.Board.LCD_Natural_Height,
-               Swap_XY or Invert_Y);
+            This.Set_Bounds (STM32.Board.LCD_Natural_Width,
+                             STM32.Board.LCD_Natural_Height,
+                             Swap_XY or Invert_Y);
       end case;
    end Set_Orientation;
-
-   -----------------------
-   -- Enable_Interrupts --
-   -----------------------
-
-   procedure Enable_Interrupts (This : in out Touch_Panel; Enabled : Boolean)
-   is
-   begin
-      null;
-      --  This.Set_Use_Interrupts (Enabled);
-   end Enable_Interrupts;
 
 end Touch_Panel_STMPE811;

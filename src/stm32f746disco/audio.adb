@@ -32,14 +32,14 @@
 --   @author  MCD Application Team                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces;           use Interfaces;
-
-with STM32;                use STM32;
-with STM32.Device;         use STM32.Device;
-with STM32.Board;          use STM32.Board;
-with STM32.GPIO;           use STM32.GPIO;
-with STM32.DMA;            use STM32.DMA;
-with STM32.SAI;            use STM32.SAI;
+with HAL;          use HAL;
+with STM32;        use STM32;
+with STM32.Device; use STM32.Device;
+with STM32.Board;  use STM32.Board;
+with STM32.GPIO;   use STM32.GPIO;
+with STM32.DMA;    use STM32.DMA;
+with STM32.SAI;    use STM32.SAI;
+with STM32.Setup;
 
 package body Audio is
 
@@ -52,7 +52,7 @@ package body Audio is
    SAI_Pins      : constant GPIO_Points :=
                      (SAI2_MCLK_A, SAI2_SCK_A, SAI2_SD_A, SAI2_SD_B,
                       SAI2_FS_A);
-   SAI_Pins_AF   : GPIO_Alternate_Function renames GPIO_AF_10_SAI2;
+   SAI_Pins_AF   : GPIO_Alternate_Function renames GPIO_AF_SAI2_10;
 
    --  SAI in/out conf
    SAI_Out_Block : SAI_Block renames Block_A;
@@ -77,7 +77,8 @@ package body Audio is
       --  We need to find a value of SAI_CK that allows such integer master
       --  clock divider
       case Freq is
-         when Audio_Freq_11kHz | Audio_Freq_22kHz | Audio_Freq_44kHz =>
+         when Audio_Freq_11kHz | Audio_Freq_22kHz |
+              Audio_Freq_32kHz | Audio_Freq_44kHz =>
             --  HSE/PLLM = 1MHz = PLLI2S VCO Input
             Configure_SAI_I2S_Clock
               (Audio_SAI,
@@ -107,11 +108,11 @@ package body Audio is
 
       Configure_IO
         (SAI_Pins,
-         (Mode        => Mode_AF,
-          Output_Type => Push_Pull,
-          Speed       => Speed_High,
-          Resistors   => Floating));
-      Configure_Alternate_Function (SAI_Pins, SAI_Pins_AF);
+         (Mode           => Mode_AF,
+          AF             => SAI_Pins_AF,
+          AF_Output_Type => Push_Pull,
+          AF_Speed       => Speed_High,
+          Resistors      => Floating));
 
       Enable_Clock (Audio_DMA);
 
@@ -182,15 +183,19 @@ package body Audio is
    procedure Initialize_Audio_I2C
    is
    begin
-      Initialize_I2C_GPIO (Audio_I2C);
-      Configure_I2C (Audio_I2C);
+      STM32.Setup.Setup_I2C_Master (Port        => Audio_I2C,
+                                    SDA         => Audio_I2C_SDA,
+                                    SCL         => Audio_I2C_SCL,
+                                    SDA_AF      => Audio_I2C_AF,
+                                    SCL_AF      => Audio_I2C_AF,
+                                    Clock_Speed => 100_000);
    end Initialize_Audio_I2C;
 
    ----------------
    -- Initialize --
    ----------------
 
-   overriding procedure Initialize_Audio_Out
+   procedure Initialize_Audio_Out
      (This      : in out WM8994_Audio_Device;
       Volume    : Audio_Volume;
       Frequency : Audio_Frequency)
@@ -215,7 +220,7 @@ package body Audio is
       This.Device.Init
         (Input     => WM8994.No_Input,
          Output    => WM8994.Auto,
-         Volume    => Unsigned_8 (Volume),
+         Volume    => UInt8 (Volume),
          Frequency =>
            WM8994.Audio_Frequency'Enum_Val
              (Audio_Frequency'Enum_Rep (Frequency)));
@@ -225,7 +230,7 @@ package body Audio is
    -- Play --
    ----------
 
-   overriding procedure Play
+   procedure Play
      (This   : in out WM8994_Audio_Device;
       Buffer : Audio_Buffer)
    is
@@ -253,7 +258,7 @@ package body Audio is
    -- Pause --
    -----------
 
-   overriding procedure Pause (This : in out WM8994_Audio_Device) is
+   procedure Pause (This : in out WM8994_Audio_Device) is
    begin
       This.Device.Pause;
       DMA_Pause (Audio_SAI, SAI_Out_Block);
@@ -263,7 +268,7 @@ package body Audio is
    -- Resume --
    ------------
 
-   overriding procedure Resume (This : in out WM8994_Audio_Device)
+   procedure Resume (This : in out WM8994_Audio_Device)
    is
    begin
       This.Device.Resume;
@@ -274,7 +279,7 @@ package body Audio is
    -- Stop --
    ----------
 
-   overriding procedure Stop (This : in out WM8994_Audio_Device)
+   procedure Stop (This : in out WM8994_Audio_Device)
    is
    begin
       This.Device.Stop (WM8994.Stop_Power_Down_Sw);
@@ -288,19 +293,19 @@ package body Audio is
    -- Set_Volume --
    ----------------
 
-   overriding procedure Set_Volume
+   procedure Set_Volume
      (This   : in out WM8994_Audio_Device;
       Volume : Audio_Volume)
    is
    begin
-      This.Device.Set_Volume (Unsigned_8 (Volume));
+      This.Device.Set_Volume (UInt8 (Volume));
    end Set_Volume;
 
    -------------------
    -- Set_Frequency --
    -------------------
 
-   overriding procedure Set_Frequency
+   procedure Set_Frequency
      (This      : in out WM8994_Audio_Device;
       Frequency : Audio_Frequency)
    is

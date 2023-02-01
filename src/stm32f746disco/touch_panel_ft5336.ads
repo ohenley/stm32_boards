@@ -35,7 +35,7 @@ with HAL.Framebuffer;
 private with FT5336;
 private with STM32.Device;
 private with STM32.I2C;
-private with Ravenscar_Time;
+private with STM32.GPIO;
 
 package Touch_Panel_FT5336 is
 
@@ -43,34 +43,28 @@ package Touch_Panel_FT5336 is
    with private;
 
    function Initialize
-     (This              : in out Touch_Panel;
-      Orientation       : HAL.Framebuffer.Display_Orientation :=
-                            HAL.Framebuffer.Default;
-      Calibrate         : Boolean := False;
-      Enable_Interrupts : Boolean := False) return Boolean;
+     (This : in out Touch_Panel;
+      Orientation : HAL.Framebuffer.Display_Orientation :=
+        HAL.Framebuffer.Default) return Boolean;
 
    procedure Initialize
-     (This              : in out Touch_Panel;
-      Orientation       : HAL.Framebuffer.Display_Orientation :=
-                            HAL.Framebuffer.Default;
-      Calibrate         : Boolean := False;
-      Enable_Interrupts : Boolean := False);
+     (This : in out Touch_Panel;
+      Orientation : HAL.Framebuffer.Display_Orientation :=
+        HAL.Framebuffer.Default);
 
    procedure Set_Orientation
      (This        : in out Touch_Panel;
       Orientation : HAL.Framebuffer.Display_Orientation);
 
-   procedure Enable_Interrupts
-     (This    : in out Touch_Panel;
-      Enabled : Boolean);
-
 private
 
-   TP_I2C   : STM32.I2C.I2C_Port renames STM32.Device.I2C_3;
+   TP_I2C     : STM32.I2C.I2C_Port renames STM32.Device.I2C_3;
+   TP_I2C_SDA : STM32.GPIO.GPIO_Point renames STM32.Device.PH7;
+   TP_I2C_SCL : STM32.GPIO.GPIO_Point renames STM32.Device.PH8;
+   TP_I2C_AF  : STM32.GPIO_Alternate_Function renames STM32.Device.GPIO_AF_I2C3_4;
 
    type Touch_Panel is limited new FT5336.FT5336_Device
      (Port     => TP_I2C'Access,
-      I2C_Addr => 16#70#,
-      Time     => Ravenscar_Time.Delays) with null record;
+      I2C_Addr => 16#70#) with null record;
 
 end Touch_Panel_FT5336;

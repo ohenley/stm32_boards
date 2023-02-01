@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                    Copyright (C) 2015, AdaCore                           --
+--                 Copyright (C) 2015-2018, AdaCore                         --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -33,13 +33,15 @@
 --  manufactured by ST Microelectronics.
 
 with Ada.Interrupts.Names;  use Ada.Interrupts;
+with System;
 
-with STM32.Device;  use STM32.Device;
+with STM32.Device;          use STM32.Device;
 
-with STM32.DMA;     use STM32.DMA;
-with STM32.FMC;     use STM32.FMC;
-with STM32.GPIO;    use STM32.GPIO;
-with STM32.I2C;     use STM32.I2C;
+with STM32.DMA;             use STM32.DMA;
+with STM32.DMA.Interrupts;  use STM32.DMA.Interrupts;
+with STM32.FMC;             use STM32.FMC;
+with STM32.GPIO;            use STM32.GPIO;
+with STM32.I2C;             use STM32.I2C;
 
 use STM32;
 
@@ -53,11 +55,11 @@ package STM32.Board is
 
    subtype User_LED is GPIO_Point;
 
-   Green    : User_LED renames PI1;
-   LED1     : User_LED renames Green;
-   LCH_LED  : User_LED renames Green;
+   Green_LED : User_LED renames PI1;
+   LED1      : User_LED renames Green_LED;
+   LCH_LED   : User_LED renames Green_LED;
 
-   All_LEDs : GPIO_Points := (1 => Green);
+   All_LEDs : GPIO_Points := (1 => Green_LED);
 
    procedure Initialize_LEDs;
    --  MUST be called prior to any use of the LEDs
@@ -127,8 +129,6 @@ package STM32.Board is
             or else
             As_Port_Id (Port) = I2C_Id_3;
 
-   procedure Configure_I2C (Port : in out I2C_Port);
-
    --------------------------------
    -- Screen/Touch panel devices --
    --------------------------------
@@ -139,15 +139,14 @@ package STM32.Board is
    Display     : Framebuffer_RK043FN48H.Frame_Buffer;
    Touch_Panel : Touch_Panel_FT5336.Touch_Panel;
 
-   TP_INT       : GPIO_Point renames PI13;
-   TP_Interrupt : Ada.Interrupts.Interrupt_ID renames
-                    Names.EXTI15_10_Interrupt;
-
    -----------
    -- Audio --
    -----------
 
    Audio_I2C     : I2C_Port renames I2C_3;
+   Audio_I2C_SDA : STM32.GPIO.GPIO_Point renames STM32.Device.PH7;
+   Audio_I2C_SCL : STM32.GPIO.GPIO_Point renames STM32.Device.PH8;
+   Audio_I2C_AF  : STM32.GPIO_Alternate_Function renames STM32.Device.GPIO_AF_I2C3_4;
    Audio_INT     : GPIO_Point renames PD6;
 
    --  Audio DMA configuration
@@ -163,9 +162,39 @@ package STM32.Board is
    -- micro SD card reader --
    --------------------------
 
+   SD_Detect_Pin     : STM32.GPIO.GPIO_Point renames PC13;
+
+   SD_DMA            : DMA_Controller renames DMA_2;
+   SD_DMA_Rx_Stream  : DMA_Stream_Selector renames Stream_3;
+   SD_DMA_Rx_Channel : DMA_Channel_Selector renames Channel_4;
+   SD_DMA_Tx_Stream  : DMA_Stream_Selector renames Stream_6;
+   SD_DMA_Tx_Channel : DMA_Channel_Selector renames Channel_4;
+   SD_Pins           : constant GPIO_Points :=
+                         (PC8, PC9, PC10, PC11, PC12, PD2);
+   SD_Pins_AF        : constant GPIO_Alternate_Function := GPIO_AF_SDMMC1_12;
+   SD_Pins_2         : constant GPIO_Points := (1 .. 0 => <>);
+   SD_Pins_AF_2      : constant GPIO_Alternate_Function := GPIO_AF_SDMMC1_12;
+   SD_Interrupt      : Ada.Interrupts.Interrupt_ID renames
+                         Ada.Interrupts.Names.SDMMC1_Interrupt;
+
+   DMA2_Stream3 : aliased DMA_Interrupt_Controller
+     (DMA_2'Access, Stream_3,
+      Ada.Interrupts.Names.DMA2_Stream3_Interrupt,
+      System.Interrupt_Priority'Last);
+
+   DMA2_Stream6 : aliased DMA_Interrupt_Controller
+     (DMA_2'Access, Stream_6,
+      Ada.Interrupts.Names.DMA2_Stream6_Interrupt,
+      System.Interrupt_Priority'Last);
+
+   SD_Rx_DMA_Int     : DMA_Interrupt_Controller renames DMA2_Stream3;
+   SD_Tx_DMA_Int     : DMA_Interrupt_Controller renames DMA2_Stream6;
+
    SDCard_Device : aliased SDCard.SDCard_Controller (SDMMC_1'Access);
 
-   --  User button
+   ------------------
+   --  User button --
+   ------------------
 
    User_Button_Point     : GPIO_Point renames PI11;
    User_Button_Interrupt : constant Interrupt_ID := Names.EXTI15_10_Interrupt;
