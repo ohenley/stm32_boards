@@ -23,6 +23,9 @@ project Stm32_Boards is
       when "stm32f429disco" =>
          Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f429disco",
                                              "src/stm32f429disco/full");
+      when "stm32f407disco" =>
+         Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f407disco",
+                                             "src/stm32f407disco/full");
       when others => null;
    end case;
 
