@@ -28,7 +28,8 @@ project Stm32_Boards is
                                              "src/stm32f407disco/full");
       when "stm32f746disco" =>
          Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f746disco",
-                                             "src/stm32f746disco/full");
+                                             "src/stm32f746disco/full",
+                                             "src/sdcard");
       when others => null;
    end case;
 
