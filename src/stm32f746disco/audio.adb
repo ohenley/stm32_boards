@@ -32,7 +32,7 @@
 --   @author  MCD Application Team                                          --
 ------------------------------------------------------------------------------
 
-with HAL;          use HAL;
+with Beta_Types;   use Beta_Types;
 with STM32;        use STM32;
 with STM32.Device; use STM32.Device;
 with STM32.Board;  use STM32.Board;
@@ -77,8 +77,7 @@ package body Audio is
       --  We need to find a value of SAI_CK that allows such integer master
       --  clock divider
       case Freq is
-         when Audio_Freq_11kHz | Audio_Freq_22kHz |
-              Audio_Freq_32kHz | Audio_Freq_44kHz =>
+         when Audio_Freq_11kHz | Audio_Freq_22kHz | Audio_Freq_32kHz | Audio_Freq_44kHz =>
             --  HSE/PLLM = 1MHz = PLLI2S VCO Input
             Configure_SAI_I2S_Clock
               (Audio_SAI,

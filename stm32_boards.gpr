@@ -16,19 +16,16 @@ project Stm32_Boards is
    Board_Src_Dirs := ("src/user_button/",
                       "src/dma2d",
                       "src/ltdc",
-                      "src/sdram",
+                      --"src/sdram",
                       "src/ravenscar");
 
    case Stm32_Config_Config.Board is
       when "stm32f429disco" =>
-         Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f429disco",
-                                             "src/stm32f429disco/full");
+         Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f429disco");
       when "stm32f407disco" =>
-         Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f407disco",
-                                             "src/stm32f407disco/full");
+         Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f407disco");
       when "stm32f746disco" =>
          Board_Src_Dirs := Board_Src_Dirs & ("src/stm32f746disco",
-                                             "src/stm32f746disco/full",
                                              "src/sdcard");
       when others => null;
    end case;

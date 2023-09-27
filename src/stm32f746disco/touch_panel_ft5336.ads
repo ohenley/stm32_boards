@@ -37,6 +37,8 @@ private with STM32.Device;
 private with STM32.I2C;
 private with STM32.GPIO;
 
+with Ravenscar_Time;
+
 package Touch_Panel_FT5336 is
 
    type Touch_Panel is limited new HAL.Touch_Panel.Touch_Panel_Device
@@ -65,6 +67,7 @@ private
 
    type Touch_Panel is limited new FT5336.FT5336_Device
      (Port     => TP_I2C'Access,
-      I2C_Addr => 16#70#) with null record;
+      I2C_Addr => 16#70#,
+      Time     => Ravenscar_Time.Delays) with null record;
 
 end Touch_Panel_FT5336;

@@ -62,7 +62,7 @@ package body Touch_Panel_FT5336 is
                                     SCL_AF      => TP_I2C_AF,
                                     Clock_Speed => 100_000);
 
-      This.TP_Set_Use_Interrupts (False);
+      -- This.TP_Set_Use_Interrupts (False);
       This.Set_Orientation (Orientation);
 
       return This.Check_Id;
